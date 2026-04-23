@@ -44,3 +44,6 @@ class DjangoTenantsConfig(AppConfig):
                                        "'%s'." % tenant_sync_router)
 
         validate_extra_extensions()
+
+        from django_tenants.signals import _connect_tenant_post_delete
+        _connect_tenant_post_delete()
