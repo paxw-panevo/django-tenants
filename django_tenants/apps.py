@@ -15,8 +15,6 @@ class DjangoTenantsConfig(AppConfig):
     verbose_name = "Django tenants"
 
     def ready(self):
-        from django.db import connection
-
         # Test for configuration recommendations. These are best practices,
         # they avoid hard to find bugs and unexpected behaviour.
 
@@ -44,3 +42,6 @@ class DjangoTenantsConfig(AppConfig):
                                        "'%s'." % tenant_sync_router)
 
         validate_extra_extensions()
+
+        from django_tenants.signals import _connect_tenant_post_delete
+        _connect_tenant_post_delete()

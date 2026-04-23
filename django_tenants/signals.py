@@ -1,6 +1,25 @@
 from django.db.models.signals import post_delete
-from django.dispatch import Signal, receiver
+from django.dispatch import Signal
 from django_tenants.utils import get_tenant_model, schema_exists
+
+
+def _connect_tenant_post_delete():
+    """Connect the post_delete signal scoped to the tenant model only.
+
+    Using @receiver(post_delete) without a sender registers a catch-all
+    listener that fires for every model delete.  Django's Collector checks
+    has_listeners(model) and, when True, skips its "fast-delete" optimisation
+    — forcing a SELECT + Python hydration + cascade walk even for models with
+    no reverse FKs or signal handlers.
+
+    By specifying sender=get_tenant_model() the listener only matches the
+    tenant model, which is the only model this handler actually cares about.
+    """
+    post_delete.connect(
+        tenant_delete_callback,
+        sender=get_tenant_model(),
+        dispatch_uid="django_tenants.signals.tenant_delete_callback",
+    )
 
 post_schema_sync = Signal()
 post_schema_sync.__doc__ = """
@@ -43,10 +62,6 @@ Argument Required = message
 """
 
 
-@receiver(post_delete)
 def tenant_delete_callback(sender, instance, **kwargs):
-    if not isinstance(instance, get_tenant_model()):
-        return
-
     if instance.auto_drop_schema and schema_exists(instance.schema_name):
         instance._drop_schema(True)
